@@ -380,11 +380,65 @@ def _category_2_adjuster(timestamp, start):
         adjusted_dt = timestamp_dt - start_dt
         return str(adjusted_dt)
 
+def fill_gaps(time_ranges):
+    """
+    Fills gaps in a list of time ranges.
+    Args:
+        time_ranges (list): List of tuples representing
+            time ranges. Each tuple should have two elements,
+            representing the start and end times.
+    Returns:
+        list: List of tuples representing the filled time ranges.
+
+    Example:
+        [(0, 180), (None, None), (None, None), (540, 780), (None, None), (None, None), (2280, 'end')]
+        =>
+        [(0, 180), (180, None), (None, 540), (540, 780), (780, None), (None, 2280), (2280, 'end')]
+
+    """
+    # Sort the time ranges by their start times
+
+
+    # Result list initialized with the first tuple from the input
+    result = [time_ranges[0]]
+    
+    # Iterate through the list of tuples starting from the second element
+    for i in range(1, len(time_ranges)):
+        # Get current tuple
+        current_start, current_end = time_ranges[i]
+        # Get the last element of the last tuple in result
+        last_end = result[-1][1]
+        
+        # Check if the start of the current tuple is None and the end of the last tuple is an integer
+        if current_start is None and isinstance(last_end, int):
+            current_start = last_end
+        
+        # Prepare to update the end of the current tuple in a similar fashion if needed,
+        # but this has to look ahead so it is done in the next iteration
+        
+        # Update the current tuple in the result
+        result.append((current_start, current_end))
+    
+    # Additional loop to fix ends based on the next start, except for the last element
+    for i in range(len(result) - 1):
+        current_start, current_end = result[i]
+        next_start, _ = result[i + 1]
+        
+        # If current end is None and next start is an integer, update current end
+        if current_end is None and isinstance(next_start, int):
+            current_end = next_start
+        
+        # Update the tuple in the result list
+        result[i] = (current_start, current_end)
+    
+    return result
+
 def collect_timestamps(tracklist, debug=False):
     cuts = []
     
     node_validity = []
     tracklist = preprocess_tracklist(tracklist)
+    # print(tracklist)
 
     tracklist_category = get_tracklist_category(tracklist)
     # print(f"The tracklist belongs to Category {tracklist_category}")
@@ -393,6 +447,9 @@ def collect_timestamps(tracklist, debug=False):
 
     lines = tracklist.split('\n')
     for i, line in enumerate(lines):
+        # print(line)
+        if line == "...":
+            line = "[...]"
         match = re.match(r'\[([^\]]+)\]', line)
         timestamp_start = match.group(1)
         if tracklist_category == 2 and not category_start_init:
@@ -422,6 +479,7 @@ def collect_timestamps(tracklist, debug=False):
     # print(len(cuts), len(node_validity))
     # print(cuts, node_validity)
     cuts = translate_timestamps_to_seconds(cuts, node_validity, tracklist_category)
+    cuts = fill_gaps(cuts)
     return cuts, node_validity, tracklist_category
 
 def convert_time_to_seconds(time_str, last_hour):
