@@ -273,6 +273,7 @@ def count_valid_connections(cuts):
 
 def get_timestamp_category(timestamp):
     if re.match(r'^\[\d{2}\]$', timestamp):
+        # print(f"Timestamp: {timestamp} - Category: [MM] - 1")
         return 1  # Category: [MM] - Relative time in minutes
     elif re.match(r'^\[\d{2}:\d{2}\]$', timestamp):
         hours = int(timestamp[1:3])
@@ -325,17 +326,21 @@ def preprocess_tracklist(tracklist):
     return preprocessed_tracklist
 
 def get_tracklist_category(tracklist):
-    category_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+    category_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, "UNK": 0}
     # category 7
     # tracklist = preprocess_tracklist(tracklist)
     lines = tracklist.split('\n')
     
     for line in lines:
+        # print(line)
         match = re.match(r'\[([^\]]+)\]', line)
         if match:
             timestamp = match.group(1)
             category = get_timestamp_category(f'[{timestamp}]')
             # print(timestamp, category)
+            category_counts[category] += 1
+        else:
+            category = "UNK"
             category_counts[category] += 1
     
     most_common_category = max(category_counts, key=category_counts.get)
@@ -441,7 +446,8 @@ def collect_timestamps(tracklist, debug=False):
     # print(tracklist)
 
     tracklist_category = get_tracklist_category(tracklist)
-    # print(f"The tracklist belongs to Category {tracklist_category}")
+
+    print(f"The tracklist belongs to Category {tracklist_category}")
     category_start = ""
     category_start_init = False
 
@@ -451,7 +457,10 @@ def collect_timestamps(tracklist, debug=False):
         if line == "...":
             line = "[...]"
         match = re.match(r'\[([^\]]+)\]', line)
-        timestamp_start = match.group(1)
+        try:
+            timestamp_start = match.group(1)
+        except:
+            timestamp_start = "..."
         if tracklist_category == 2 and not category_start_init:
             category_start_init = True
             category_start = deepcopy(timestamp_start)
